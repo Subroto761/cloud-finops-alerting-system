@@ -29,7 +29,7 @@ Containerization
 CI/CD
 - GitHub Actions
 
-  ## Key Features
+## Key Features
 
 - Automated cloud infrastructure provisioning using Terraform
 - Monitoring cloud resources using Prometheus and Grafana
@@ -38,7 +38,7 @@ CI/CD
 - Alert system for abnormal cloud spending
 - CI/CD pipeline for automated deployment
 
-  ## Project Structure
+## Project Structure
 
 cloud-finops-cost-optimizer
 
