@@ -1,0 +1,32 @@
+# Alertmanager groups, de-duplicates and routes alerts that Prometheus sends.
+# Out of the box alerts are only shown in the Alertmanager UI (http://localhost:9093).
+# To get notifications, uncomment one of the receivers below and point the route at it.
+route:
+  receiver: default
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  routes:
+    - matchers: [severity="critical"]
+      receiver: default
+      repeat_interval: 1h
+
+receivers:
+  - name: default
+
+  # - name: slack
+  #   slack_configs:
+  #     - api_url: https://hooks.slack.com/services/XXX/YYY/ZZZ
+  #       channel: "#cloud-costs"
+  #       send_resolved: true
+  #       title: "{{ .CommonAnnotations.summary }}"
+  #       text: "{{ .CommonAnnotations.description }}"
+
+  # - name: email
+  #   email_configs:
+  #     - to: you@example.com
+  #       from: alerts@example.com
+  #       smarthost: smtp.gmail.com:587
+  #       auth_username: alerts@example.com
+  #       auth_password: <app password>

@@ -1,0 +1,23 @@
+#!/bin/bash
+# Installs Docker and starts the FinOps stack against the real AWS account.
+# Credentials come from the instance profile, so nothing secret is stored here.
+set -euo pipefail
+export HOME=/root
+mkdir -p /root/.aws
+
+apt-get update -y
+apt-get install -y docker.io docker-compose-v2 git
+systemctl enable --now docker
+
+git clone ${repo_url} /opt/finops
+cd /opt/finops
+
+cat > .env <<ENV
+FINOPS_DEMO=0
+AWS_REGION=${aws_region}
+MONTHLY_BUDGET_USD=${monthly_budget_usd}
+GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 12)
+ENV
+chmod 600 .env
+
+docker compose up -d --build

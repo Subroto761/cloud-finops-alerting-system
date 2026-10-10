@@ -1,0 +1,57 @@
+# Prometheus evaluates these rules and sends firing alerts to Alertmanager.
+# Thresholds are deliberately simple so they are easy to explain and tune.
+groups:
+  - name: finops-cost
+    rules:
+      - alert: CostSpike
+        # Yesterday's spend is more than 30% above the previous 7-day average,
+        # and the increase is at least $1 so tiny accounts don't page on cents.
+        expr: |
+          (finops_daily_cost_usd - finops_daily_cost_baseline_usd) / finops_daily_cost_baseline_usd * 100 > 30
+          and (finops_daily_cost_usd - finops_daily_cost_baseline_usd) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Daily AWS spend jumped {{ $value | printf \"%.0f\" }}% above the 7-day average"
+          description: "Check finops_daily_cost_by_service_usd in Grafana to see which service grew."
+
+      - alert: MonthlyBudgetAtRisk
+        # The exporter projects month-to-date spend linearly to month end and
+        # publishes the budget (MONTHLY_BUDGET_USD) as a metric to compare with.
+        expr: finops_projected_month_cost_usd > finops_monthly_budget_usd
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Projected monthly spend ${{ $value | printf \"%.2f\" }} exceeds the budget"
+
+  - name: finops-waste
+    rules:
+      - alert: IdleResourcesWastingMoney
+        expr: sum(finops_idle_monthly_waste_usd) > 20
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "Idle resources are costing about ${{ $value | printf \"%.2f\" }} per month"
+          description: "Run `python -m finops report` for the list of instances, volumes and IPs."
+
+  - name: finops-exporter-health
+    rules:
+      - alert: FinOpsExporterDown
+        expr: up{job="finops-exporter"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "FinOps exporter is not reachable"
+
+      - alert: FinOpsDataStale
+        # Refresh runs every 6h; if nothing succeeded for 13h, data is stale.
+        expr: time() - finops_last_refresh_timestamp_seconds > 13 * 3600 or finops_last_refresh_success == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "FinOps data has not refreshed (check AWS credentials and exporter logs)"

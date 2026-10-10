@@ -1,0 +1,15 @@
+[project]
+name = "cloud-finops-alerting"
+version = "1.0.0"
+description = "Find idle AWS resources, track daily spend and alert on cost spikes with Prometheus"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

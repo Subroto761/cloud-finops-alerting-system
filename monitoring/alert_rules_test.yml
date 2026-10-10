@@ -1,0 +1,84 @@
+# Unit tests for the alert rules. Run with:
+#   promtool test rules monitoring/alert_rules_test.yml
+rule_files:
+  - alert_rules.yml
+
+evaluation_interval: 1m
+
+tests:
+  - name: cost spike fires when spend is 50% above baseline
+    interval: 1m
+    input_series:
+      - series: finops_daily_cost_usd
+        values: 15x20
+      - series: finops_daily_cost_baseline_usd
+        values: 10x20
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: CostSpike
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: "Daily AWS spend jumped 50% above the 7-day average"
+              description: "Check finops_daily_cost_by_service_usd in Grafana to see which service grew."
+
+  - name: small accounts do not page on a few cents
+    interval: 1m
+    input_series:
+      - series: finops_daily_cost_usd
+        values: 1.2x20
+      - series: finops_daily_cost_baseline_usd
+        values: 0.5x20
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: CostSpike
+        exp_alerts: []
+
+  - name: normal day does not fire
+    interval: 1m
+    input_series:
+      - series: finops_daily_cost_usd
+        values: 11x20
+      - series: finops_daily_cost_baseline_usd
+        values: 10x20
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: CostSpike
+        exp_alerts: []
+
+  - name: budget alert fires when projection exceeds budget
+    interval: 1m
+    input_series:
+      - series: finops_projected_month_cost_usd
+        values: 60x30
+      - series: finops_monthly_budget_usd
+        values: 50x30
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: MonthlyBudgetAtRisk
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: "Projected monthly spend $60.00 exceeds the budget"
+
+  - name: idle waste above $20 per month fires
+    interval: 1m
+    input_series:
+      - series: 'finops_idle_monthly_waste_usd{resource_type="ec2_instance"}'
+        values: 15x60
+      - series: 'finops_idle_monthly_waste_usd{resource_type="ebs_volume"}'
+        values: 10x60
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: IdleResourcesWastingMoney
+        exp_alerts: []   # still inside the 30m "for" window
+      - eval_time: 40m
+        alertname: IdleResourcesWastingMoney
+        exp_alerts:
+          - exp_labels:
+              severity: info
+            exp_annotations:
+              summary: "Idle resources are costing about $25.00 per month"
+              description: "Run `python -m finops report` for the list of instances, volumes and IPs."

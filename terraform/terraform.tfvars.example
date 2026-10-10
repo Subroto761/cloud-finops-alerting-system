@@ -1,0 +1,7 @@
+aws_region         = "ap-south-1"
+monthly_budget_usd = 25
+alert_email        = "you@example.com"
+
+# Set to true to also run the monitoring stack on a t3.small (about $15/month)
+create_monitoring_host = false
+allowed_cidr           = "203.0.113.5/32" # your public IP

@@ -1,0 +1,8 @@
+.git
+.github
+tests
+terraform
+monitoring
+**/__pycache__
+.pytest_cache
+.ruff_cache

@@ -1,0 +1,51 @@
+# Full stack: exporter -> Prometheus (scrapes + evaluates alert rules) -> Alertmanager,
+# with Grafana for dashboards.
+#
+#   Demo (no AWS needed):   docker compose up --build
+#   Real AWS account:        FINOPS_DEMO=0 docker compose up --build
+#                            (uses credentials from ~/.aws, see README)
+services:
+  finops-exporter:
+    build: .
+    environment:
+      FINOPS_DEMO: ${FINOPS_DEMO:-1}
+      AWS_REGION: ${AWS_REGION:-ap-south-1}
+      MONTHLY_BUDGET_USD: ${MONTHLY_BUDGET_USD:-50}
+      REFRESH_SECONDS: ${REFRESH_SECONDS:-21600}
+    volumes:
+      - ~/.aws:/home/finops/.aws:ro  # local runs; on EC2 the instance role is used
+    ports:
+      - "9108:9108"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.53.2
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on: [finops-exporter]
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on: [prometheus]
+    restart: unless-stopped
